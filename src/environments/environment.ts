@@ -1,3 +1,3 @@
 export const environment = {
-  apiBaseUrl: "http://localhost:8088/api",
+  apiBaseUrl: "https://kafv2.gpsbox.ru/api",
 };
