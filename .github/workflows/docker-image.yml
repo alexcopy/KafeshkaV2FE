@@ -1,0 +1,51 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+ 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log in to Docker registry
+        run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin    
+  
+ 
+      - name: Build Docker image
+        run: docker build . --file Dockerfile --tag ${{ secrets.DOCKERHUB_USERNAME }}/kafeshkav2fe:latest
+
+      - name: Push Docker image to Docker Hub
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/kafeshkav2fe:latest
+
+      - name: Fetch project details
+        id: project-details
+        run: echo "::set-output name=project-name::KafeshkaV2"
+
+      - name: Send Slack notification - Build Status
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          STATUS: ${{ job.status }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "text": "---------------------------\n\n✨🚀 *Notification for Project:* KafeshkaV2-Front End\n*Build Status:* '${{ env.STATUS }}' 🎉🔥"
+          }' $SLACK_WEBHOOK_URL
+
+      - name: Send Slack notification - Tests Failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "text": "---------------------------\n\n❌🔔 *Tests Failed!* \nProject: KafeshkaV2 FE \n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}"
+          }' $SLACK_WEBHOOK_URL
+
